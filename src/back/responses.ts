@@ -1344,7 +1344,7 @@ function runGameFactory(state: BackState) {
       '',
       {
         detached: false,
-        shell: true,
+        shell: process.platform === 'win32',
         cwd: gameLaunchInfo.launchInfo.cwd,
         execFile: !!gameLaunchInfo.launchInfo.execFile,
         env: gameLaunchInfo.launchInfo.env
