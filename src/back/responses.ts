@@ -1352,7 +1352,8 @@ function runGameFactory(state: BackState) {
       },
       {
         path: dirname,
-        // Pops the first element.
+        // Pops the first element. Typescript thinks this could be undefined. It can't: createCommand() will return an array of minimum length 1.
+        // @ts-ignore
         filename: launchArray.shift(),
         // If we're on windows, escape the args for a shell. Otherwise, don't.
         arguments: process.platform === 'win32' ? escapeArgsForShell([...launchArray, ...gameLaunchInfo.launchInfo.gameArgs]) : [...launchArray, ...gameLaunchInfo.launchInfo.gameArgs],
