@@ -1353,7 +1353,7 @@ function runGameFactory(state: BackState) {
       {
         path: dirname,
         // Pops the first element.
-        filename: launchArray.slice(),
+        filename: launchArray.shift(),
         // If we're on windows, escape the args for a shell. Otherwise, don't.
         arguments: process.platform === 'win32' ? escapeArgsForShell([...launchArray, ...gameLaunchInfo.launchInfo.gameArgs]) : [...launchArray, ...gameLaunchInfo.launchInfo.gameArgs],
         kill: true
