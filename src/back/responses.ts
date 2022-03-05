@@ -1336,6 +1336,7 @@ function runGameFactory(state: BackState) {
   return (gameLaunchInfo: GameLaunchInfo): ManagedChildProcess => {
     // Run game as a service and register it
     const dirname = path.dirname(gameLaunchInfo.launchInfo.gamePath);
+    const launchArray: string[] = createCommand(gameLaunchInfo.launchInfo.gamePath, gameLaunchInfo.launchInfo.useWine, !!gameLaunchInfo.launchInfo.execFile);
     // Keep file path relative to cwd
     const proc = runService(
       state,
@@ -1351,8 +1352,10 @@ function runGameFactory(state: BackState) {
       },
       {
         path: dirname,
-        filename: createCommand(gameLaunchInfo.launchInfo.gamePath, gameLaunchInfo.launchInfo.useWine, !!gameLaunchInfo.launchInfo.execFile),
-        arguments: escapeArgsForShell(gameLaunchInfo.launchInfo.gameArgs),
+        // Pops the first element.
+        filename: launchArray.slice(),
+        // If we're on windows, escape the args for a shell. Otherwise, don't.
+        arguments: process.platform === 'win32' ? escapeArgsForShell([...launchArray, ...gameLaunchInfo.launchInfo.gameArgs]) : [...launchArray, ...gameLaunchInfo.launchInfo.gameArgs],
         kill: true
       }
     );
@@ -1366,19 +1369,20 @@ function runGameFactory(state: BackState) {
   };
 }
 
-function createCommand(filename: string, useWine: boolean, execFile: boolean): string {
+function createCommand(filename: string, useWine: boolean, execFile: boolean): string[] {
   // This whole escaping thing is horribly broken. We probably want to switch
   // to an array representing the argv instead and not have a shell
   // in between.
   switch (process.platform) {
     case 'win32':
-      return execFile ? filename : `"${filename}"`; // Quotes cause issues with execFile
+      return execFile ? [filename] : [`"${filename}"`]; // Quotes cause issues with execFile
     case 'darwin':
     case 'linux':
       if (useWine) {
-        return `wine start /unix "${filename}"`;
+        // Not using a shell for non-windows platforms anymore.
+        return ["wine", "start", "/unix", `"${filename}"`];
       }
-      return `"${filename}"`;
+      return [`"${filename}"`];
     default:
       throw Error('Unsupported platform');
   }
