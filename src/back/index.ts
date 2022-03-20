@@ -1,4 +1,3 @@
-import { AdditionalApp } from '@database/entity/AdditionalApp';
 import { Game } from '@database/entity/Game';
 import { GameData } from '@database/entity/GameData';
 import { Playlist } from '@database/entity/Playlist';
@@ -218,7 +217,7 @@ async function main() {
     // Curation
     BackIn.IMPORT_CURATION,
     BackIn.LAUNCH_CURATION,
-    BackIn.LAUNCH_CURATION_ADDAPP,
+    BackIn.LAUNCH_CURATION_EXTRAS,
     // ?
     BackIn.SYNC_GAME_METADATA,
     // Meta Edits
@@ -310,7 +309,7 @@ async function onProcessMessage(message: any, sendHandle: any): Promise<void> {
     const options: ConnectionOptions = {
       type: 'sqlite',
       database: path.join(state.config.flashpointPath, 'Data', 'flashpoint.sqlite'),
-      entities: [Game, AdditionalApp, Playlist, PlaylistGame, Tag, TagAlias, TagCategory, GameData, Source, SourceData],
+      entities: [Game, Playlist, PlaylistGame, Tag, TagAlias, TagCategory, GameData, Source, SourceData],
       migrations: [Initial1593172736527, AddExtremeToPlaylist1599706152407, GameData1611753257950, SourceDataUrlPath1612434225789, SourceFileURL1612435692266,
         SourceFileCount1612436426353, GameTagsStr1613571078561, GameDataParams1619885915109]
     };

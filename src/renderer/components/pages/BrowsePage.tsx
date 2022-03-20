@@ -285,6 +285,7 @@ export class BrowsePage extends React.Component<BrowsePageProps, BrowsePageState
             isEditing={this.state.isEditingGame}
             isNewGame={this.state.isNewGame}
             onEditGame={this.onEditGame}
+            onDeleteGame={this.props.onDeleteGame}
             onUpdateActiveGameData={this.onUpdateActiveGameData}
             onEditClick={this.onStartEditClick}
             onDiscardClick={this.onDiscardEditClick}
@@ -743,7 +744,7 @@ export class BrowsePage extends React.Component<BrowsePageProps, BrowsePageState
         language: '',
         library: this.props.gameLibrary,
         orderTitle: '',
-        addApps: [],
+        children: [],
         placeholder: false,
         activeDataOnDisk: false
       });
