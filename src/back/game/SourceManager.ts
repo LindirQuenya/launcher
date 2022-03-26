@@ -15,18 +15,20 @@ export function find(): Promise<Source[]> {
   return sourceRepository.find();
 }
 
-export function findOne(sourceId: number): Promise<Source | undefined> {
+export async function findOne(sourceId: number): Promise<Source | undefined> {
   const sourceRepository = getManager().getRepository(Source);
-  return sourceRepository.findOne(sourceId);
+  const result = await sourceRepository.findOne({where: {id: sourceId}});
+  return result === null ? undefined : result;
 }
 
-export function findBySourceFileUrl(sourceFileUrl: string): Promise<Source | undefined> {
+export async function findBySourceFileUrl(sourceFileUrl: string): Promise<Source | undefined> {
   const sourceRepository = getManager().getRepository(Source);
-  return sourceRepository.findOne({
+  const result = await sourceRepository.findOne({
     where: {
       sourceFileUrl
     }
   });
+  return result === null ? undefined : result;
 }
 
 export function save(source: Source): Promise<Source> {

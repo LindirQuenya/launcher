@@ -5,7 +5,7 @@ import { Tag } from '@database/entity/Tag';
 import { TagAlias } from '@database/entity/TagAlias';
 import { TagCategory } from '@database/entity/TagCategory';
 import { BackOut, MergeTagData, TagSuggestion } from '@shared/back/types';
-import { getManager, Not, SelectQueryBuilder } from 'typeorm';
+import { getManager, IsNull, Not, SelectQueryBuilder } from 'typeorm';
 import * as GameManager from './GameManager';
 
 export async function findTagCategories(): Promise<TagCategory[]> {
@@ -141,11 +141,12 @@ export async function findTag(name: string): Promise<Tag | undefined> {
   });
 
   if (alias) {
-    return tagRepository.findOne({
+    const result = await tagRepository.findOne({
       where: [
         { id: alias.tagId }
       ]
     });
+    return result === null ? undefined : result;
   }
 }
 
@@ -213,7 +214,7 @@ export async function createTag(name: string, categoryName?: string, aliases?: s
   const tagRepository = getManager().getRepository(Tag);
   const tagAliasRepostiory = getManager().getRepository(TagAlias);
   const tagCategoryRepository = getManager().getRepository(TagCategory);
-  let category: TagCategory | undefined = undefined;
+  let category: TagCategory | undefined | null = undefined;
 
   // If category is defined, find/make it
   if (categoryName) {
@@ -281,19 +282,21 @@ export async function saveTagCategory(tagCategory: TagCategory): Promise<TagCate
 
 export async function getTagCategoryById(categoryId: number): Promise<TagCategory | undefined> {
   const tagCategoryRepository = getManager().getRepository(TagCategory);
-  return tagCategoryRepository.findOne(categoryId);
+  const result = await tagCategoryRepository.findOne({where: {id: categoryId}});
+  return result === null ? undefined : result;
 }
 
 export async function getTagById(tagId: number): Promise<Tag | undefined> {
   const tagRepository = getManager().getRepository(Tag);
-  return tagRepository.findOne(tagId);
+  const result = await tagRepository.findOne({ where: {id: tagId}});
+  return result === null ? undefined : result;
 }
 
 export async function fixPrimaryAliases(): Promise<number> {
   const tagRepository = getManager().getRepository(Tag);
   let fixed = 0;
 
-  const tags = await tagRepository.find({ where: [{ primaryAliasId: null }] });
+  const tags = await tagRepository.find({ where: [{ primaryAliasId: IsNull() }] });
   const tagChunks = chunkArray(tags, 2000);
 
   for (const chunk of tagChunks) {
@@ -338,7 +341,7 @@ export async function deleteTagCategory(tagCategoryId: number, openDialog: ShowM
     }
     if (res == 0) {
       // Find first category that isn't the one we're deleting
-      let defaultCategory = await tagCategoryRepository.findOne({
+      let defaultCategory: TagCategory | null | undefined = await tagCategoryRepository.findOne({
         where: [
           { id: Not(tagCategoryId) }
         ]

@@ -15,7 +15,7 @@ import { Coerce } from '@shared/utils/Coerce';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as TagManager from './TagManager';
-import { Brackets, FindOneOptions, getManager, SelectQueryBuilder, IsNull } from 'typeorm';
+import { Brackets, FindOneOptions, getManager, SelectQueryBuilder, IsNull, In } from 'typeorm';
 import * as GameDataManager from './GameDataManager';
 import { isNull, isNullOrUndefined } from 'util';
 
@@ -36,24 +36,36 @@ export const onDidRemovePlaylistGame = new ApiEmitter<PlaylistGame>();
 
 export async function countGames(): Promise<number> {
   const gameRepository = getManager().getRepository(Game);
-  return gameRepository.count({ parentGameId: IsNull() });
+  return gameRepository.count({ where: { parentGameId: IsNull() }});
 }
 
-/** Find the game with the specified ID. Ardil TODO find refs*/
+/** Find the game with the specified ID. */
 export async function findGame(id?: string, filter?: FindOneOptions<Game>): Promise<Game | undefined> {
-  if (id || filter) {
-    const gameRepository = getManager().getRepository(Game);
-    const game = await gameRepository.findOne(id, filter);
-    if (game) {
-      game.tags.sort(tagSort);
+  if (filter && id) {
+    filter.where = {...filter.where, id: id};
+  } else if (id) {
+    filter = {where: {id: id}};
+  }
+  if (filter) {
+    if (id) {
+      log.debug('findGame', id);
     }
-    return game;
+    const game = await getManager().getRepository(Game).findOne(filter);
+    /*const query = getManager().getRepository(Game).createQueryBuilder('game')
+    .where('game.id = :searchid', {searchid: id});
+    console.log(query.getSql());
+    const game = await query.getOne();*/
+    if (game !== null) {
+      game.tags.sort(tagSort);
+      log.debug('findGame', game.title);
+    }
+    return game === null ? undefined : game;
   }
 }
+
 /** Get the row number of an entry, specified by its gameId. */
 export async function findGameRow(gameId: string, filterOpts?: FilterGameOpts, orderBy?: GameOrderBy, direction?: GameOrderReverse, index?: PageTuple): Promise<number> {
   if (orderBy) { validateSqlName(orderBy); }
-  log.debug('GameManager', 'findGameRow');
 
   // const startTime = Date.now();
   const gameRepository = getManager().getRepository(Game);
@@ -134,7 +146,6 @@ export async function findGamePageKeyset(filterOpts: FilterGameOpts, orderBy: Ga
   .select(`g.${orderBy}, g.title, g.id, row_number() over(order by g.${orderBy} ${direction}, g.title ${direction}) + 1 page_number`)
   .from('(' + subQ.getQuery() + ')', 'g')
   .where('g.page_boundary = 1')
-  .andWhere('g.parentGameId is null')
   .setParameters(subQ.getParameters());
 
   if (searchLimit) {
@@ -168,15 +179,6 @@ export async function findGamePageKeyset(filterOpts: FilterGameOpts, orderBy: Ga
   }
 
   // console.log(`  Count: ${Date.now() - startTime}ms`);
-  let i = 0;
-  while (i < total) {
-    if (keyset[i]) {
-      // @ts-ignore
-      log.debug('GameManager', keyset[i].title);
-      i = total;
-    }
-    i++;
-  }
 
   return {
     keyset,
@@ -195,7 +197,7 @@ export type FindGamesOpts = {
 
 export async function findAllGames(): Promise<Game[]> {
   const gameRepository = getManager().getRepository(Game);
-  return gameRepository.find({parentGameId: IsNull()});
+  return gameRepository.find({where: {parentGameId: IsNull()}});
 }
 
 /** Search the database for games. */
@@ -203,7 +205,7 @@ export async function findGames<T extends boolean>(opts: FindGamesOpts, shallow:
   const ranges = opts.ranges || [{ start: 0, length: undefined }];
   const rangesOut: ResponseGameRange<T>[] = [];
 
-  console.log('FindGames:');
+  // console.log('FindGames:');
 
   let query: SelectQueryBuilder<Game> | undefined;
   for (let i = 0; i < ranges.length; i++) {
@@ -326,7 +328,8 @@ export async function removeGameAndChildren(gameId: string, dataPacksFolderPath:
 export async function findPlaylist(playlistId: string, join?: boolean): Promise<Playlist | undefined> {
   const opts: FindOneOptions<Playlist> = join ? { relations: ['games'] } : {};
   const playlistRepository = getManager().getRepository(Playlist);
-  return playlistRepository.findOne(playlistId, opts);
+  const result = await playlistRepository.findOne({...opts, where: {id: playlistId}});
+  return result === null ? undefined : result;
 }
 
 export async function findPlaylistByName(playlistName: string, join?: boolean): Promise<Playlist | undefined> {
@@ -337,7 +340,8 @@ export async function findPlaylistByName(playlistName: string, join?: boolean): 
     }
   } : {};
   const playlistRepository = getManager().getRepository(Playlist);
-  return playlistRepository.findOne(opts);
+  const result = await playlistRepository.findOne(opts);
+  return result === null ? undefined : result;
 }
 
 /** Find playlists given a filter. @TODO filter */
@@ -371,12 +375,13 @@ export async function updatePlaylist(playlist: Playlist): Promise<Playlist> {
 /** Finds a Playlist Game */
 export async function findPlaylistGame(playlistId: string, gameId: string): Promise<PlaylistGame | undefined> {
   const playlistGameRepository = getManager().getRepository(PlaylistGame);
-  return await playlistGameRepository.findOne({
+  const result = await playlistGameRepository.findOne({
     where: {
       gameId: gameId,
       playlistId: playlistId
     }
   });
+  return result === null ? undefined : result;
 }
 
 /** Removes a Playlist Game */
@@ -448,7 +453,7 @@ async function chunkedFindByIds(gameIds: string[]): Promise<Game[]> {
   const chunks = chunkArray(gameIds, 100);
   let gamesFound: Game[] = [];
   for (const chunk of chunks) {
-    gamesFound = gamesFound.concat(await gameRepository.findByIds(chunk, {parentGameId: IsNull()}));
+    gamesFound = gamesFound.concat(await gameRepository.findBy({id: In(chunk), parentGameId: IsNull()}));
   }
 
   return gamesFound;
@@ -475,12 +480,10 @@ function applyFlatGameFilters(alias: string, query: SelectQueryBuilder<Game>, fi
       }
       for (const phrase of searchQuery.genericWhitelist) {
         doWhereTitle(alias, query, phrase, whereCount, true);
-        log.debug("GameManager", `Whitelist title string: ${phrase}`);
         whereCount++;
       }
       for (const phrase of searchQuery.genericBlacklist) {
         doWhereTitle(alias, query, phrase, whereCount, false);
-        log.debug("GameManager", `Blacklist title string: ${phrase}`);
         whereCount++;
       }
     }
@@ -586,7 +589,6 @@ async function getGameQuery(
   alias: string, filterOpts?: FilterGameOpts, orderBy?: GameOrderBy, direction?: GameOrderReverse, offset?: number, limit?: number, index?: PageTuple
 ): Promise<SelectQueryBuilder<Game>> {
   validateSqlName(alias);
-  log.debug('GameManager', 'getGameQuery');
   if (orderBy) { validateSqlName(orderBy); }
   if (direction) { validateSqlOrder(direction); }
 

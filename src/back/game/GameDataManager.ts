@@ -63,9 +63,10 @@ export async function downloadGameData(gameDataId: number, dataPacksFolderPath: 
   }
 }
 
-export function findOne(id: number): Promise<GameData | undefined> {
+export async function findOne(id: number): Promise<GameData | undefined> {
   const gameDataRepository = getManager().getRepository(GameData);
-  return gameDataRepository.findOne(id);
+  const result = await gameDataRepository.findOne({where: {id: id}});
+  return result === null ? undefined : result;
 }
 
 export function findGameData(gameId: string): Promise<GameData[]> {
@@ -79,9 +80,9 @@ export function findGameData(gameId: string): Promise<GameData[]> {
 
 export function findSourceDataForHashes(hashes: string[]): Promise<SourceData[]> {
   const sourceDataRepository = getManager().getRepository(SourceData);
-  return sourceDataRepository.find({
+  return sourceDataRepository.find({where: {
     sha256: In(hashes)
-  });
+  }});
 }
 
 export function save(gameData: GameData): Promise<GameData> {

@@ -11,19 +11,21 @@ export function findBySource(sourceId: number): Promise<SourceData[]> {
   });
 }
 
-export function findSourceHash(sourceId: number, hash: string): Promise<SourceData | undefined> {
+export async function findSourceHash(sourceId: number, hash: string): Promise<SourceData | undefined> {
   const sourceDataRepository = getManager().getRepository(SourceData);
-  return sourceDataRepository.findOne({
+  const result = await sourceDataRepository.findOne({
     where: {
       sourceId,
       sha256: hash
     }
   });
+  return result === null ? undefined : result;
 }
 
-export function findOne(sourceDataId: number): Promise<SourceData | undefined> {
+export async function findOne(sourceDataId: number): Promise<SourceData | undefined> {
   const sourceDataRepository = getManager().getRepository(SourceData);
-  return sourceDataRepository.findOne(sourceDataId);
+  const result = await sourceDataRepository.findOne({where: {id: sourceDataId }});
+  return result === null ? undefined : result;
 }
 
 export function save(sourceData: SourceData): Promise<SourceData> {
