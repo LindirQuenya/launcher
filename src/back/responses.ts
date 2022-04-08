@@ -852,7 +852,7 @@ export function registerRequestCallbacks(state: BackState): void {
     }
   });
 
-  state.socketServer.register(BackIn.SERVICE_ACTION, (event, action, id) => {
+  state.socketServer.register(BackIn.SERVICE_ACTION, async (event, action, id) => {
     const proc = state.services.get(id);
     if (proc) {
       switch (action) {
@@ -860,10 +860,10 @@ export function registerRequestCallbacks(state: BackState): void {
           proc.spawn();
           break;
         case ProcessAction.STOP:
-          proc.kill();
+          await proc.kill();
           break;
         case ProcessAction.RESTART:
-          proc.restart();
+          await proc.restart();
           break;
         default:
           console.warn('Unhandled Process Action');
@@ -1138,7 +1138,7 @@ export function registerRequestCallbacks(state: BackState): void {
     const timeoutPromise = new Promise((resolve, reject) => {
       setTimeout(resolve, 20000);
     });
-    const writePromise = new Promise((resolve, reject) => {
+    const writePromise = new Promise<void>((resolve, reject) => {
       const loopFunc = () => {
         if (state.writeLocks > 0) {
           setTimeout(loopFunc, 100);
