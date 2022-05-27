@@ -2,6 +2,7 @@
 import { chunkArray } from '@back/util/misc';
 import { Game } from '@database/entity/Game';
 import { Playlist } from '@database/entity/Playlist';
+import * as remote from '@electron/remote';
 import { getGamePath } from '@renderer/Util';
 import { BackIn, BackOut } from '@shared/back/types';
 import { LOGOS, SCREENSHOTS } from '@shared/constants';
@@ -10,7 +11,6 @@ import { ExecMapping, IService } from '@shared/interfaces';
 import { LangContainer } from '@shared/lang';
 import { Legacy_PlatformFileIterator } from '@shared/legacy/GameManager';
 import { stringifyMetaValue } from '@shared/MetaEdit';
-import { remote } from 'electron';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as React from 'react';
@@ -364,7 +364,7 @@ export class DeveloperPage extends React.Component<DeveloperPageProps, Developer
                 // Game exists, import the data
                 await window.Shared.back.request(BackIn.IMPORT_GAME_DATA, game.id, filePath)
                 .then((gameData) => {
-                  this.setState({ text: text + filePath + '\n' +  createTextBarProgress(current, files.length) })
+                  this.setState({ text: text + filePath + '\n' +  createTextBarProgress(current, files.length) });
                 })
                 .catch((error) => {
                   text = text + `Failure - ${fileName} - ERROR: ${error}\n`;
@@ -779,7 +779,7 @@ async function checkFileLocation(games: Game[]): Promise<string> {
       try {
         const gamePath = await getGamePath(game, window.Shared.config.fullFlashpointPath, window.Shared.preferences.data.htdocsFolderPath, window.Shared.preferences.data.dataPacksFolderPath);
         if (gamePath === undefined) { pathFailed.push(game); }
-      } catch (error) {
+      } catch (error: any) {
         pathError.push([ game, error ]);
       }
     }
