@@ -29,40 +29,17 @@ export async function startBrowserMode(init: Init): Promise<void> {
     config: createErrorProxy('config'),
     prefs: createErrorProxy('prefs'),
   };
+  const installed = fs.existsSync('./.installed');
+  state.mainFolderPath = getMainFolderPath(installed);
+  state.config = ConfigFile.readOrCreateFileSync(path.join(state.mainFolderPath, CONFIG_FILENAME));
+  state.prefs = PreferencesFile.readOrCreateFileSync(path.join(state.config.flashpointPath, PREFERENCES_FILENAME));
 
-  await startup();
+  app.once('ready', onAppReady);
+  app.once('window-all-closed', onAppWindowAllClosed);
+  app.once('web-contents-created', onAppWebContentsCreated);
+  app.on('activate', onAppActivate);
 
   // -- Functions --
-
-  async function startup() {
-    app.once('ready', onAppReady);
-    app.once('window-all-closed', onAppWindowAllClosed);
-    app.once('web-contents-created', onAppWebContentsCreated);
-    app.on('activate', onAppActivate);
-
-    const installed = fs.existsSync('./.installed');
-    state.mainFolderPath = getMainFolderPath(installed);
-    state.config = ConfigFile.readOrCreateFileSync(path.join(state.mainFolderPath, CONFIG_FILENAME));
-    state.prefs = PreferencesFile.readOrCreateFileSync(path.join(state.config.flashpointPath, PREFERENCES_FILENAME));
-
-    let extension = '';
-    switch (process.platform) {
-      case 'win32':
-        extension = '.dll';
-        break;
-      case 'linux':
-        extension = '.so';
-        break;
-      case 'darwin':
-        extension = '.plugin';
-        break;
-      default:
-        console.error(`No plugin file extension is assigned to the current operating system (platform: "${process.platform}").`);
-        break;
-    }
-
-    app.commandLine.appendSwitch('ppapi-flash-path', path.resolve(state.config.flashpointPath, 'Plugins', `flash${extension}`));
-  }
 
   function onAppReady(): void {
     if (!session.defaultSession) { throw new Error('Default session is missing!'); }
