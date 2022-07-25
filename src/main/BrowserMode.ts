@@ -4,7 +4,6 @@ import * as remoteMain from '@electron/remote/main';
 import { AppConfigData } from '@shared/config/interfaces';
 import { AppPreferencesData } from '@shared/preferences/interfaces';
 import { PreferencesFile } from '@shared/preferences/PreferencesFile';
-import { createErrorProxy } from '@shared/Util';
 import { app, BrowserWindow, session, shell } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -21,18 +20,21 @@ type State = {
 }
 
 export async function startBrowserMode(init: Init): Promise<void> {
+  const installed = fs.existsSync('./.installed');
+  const mainFolderPath = getMainFolderPath(installed);
+  if (process.platform == 'darwin') {
+    process.chdir(mainFolderPath);
+  }
+  const config = ConfigFile.readOrCreateFileSync(path.join(mainFolderPath, CONFIG_FILENAME));
+  const prefs = PreferencesFile.readOrCreateFileSync(path.join(config.flashpointPath, PREFERENCES_FILENAME));
   const state: State = {
     window: undefined,
     url: init.args.browser_url || '',
     entry: init.rest,
-    mainFolderPath: createErrorProxy('mainFolderPath'),
-    config: createErrorProxy('config'),
-    prefs: createErrorProxy('prefs'),
+    mainFolderPath: mainFolderPath,
+    config: config,
+    prefs: prefs,
   };
-  const installed = fs.existsSync('./.installed');
-  state.mainFolderPath = getMainFolderPath(installed);
-  state.config = ConfigFile.readOrCreateFileSync(path.join(state.mainFolderPath, CONFIG_FILENAME));
-  state.prefs = PreferencesFile.readOrCreateFileSync(path.join(state.config.flashpointPath, PREFERENCES_FILENAME));
 
   app.once('ready', onAppReady);
   app.once('window-all-closed', onAppWindowAllClosed);
