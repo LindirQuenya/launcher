@@ -21,9 +21,9 @@ type State = {
 
 export async function startBrowserMode(init: Init): Promise<void> {
   const installed = fs.existsSync('./.installed');
-  const mainFolderPath = getMainFolderPath(installed);
+  let mainFolderPath = getMainFolderPath(installed);
   if (process.platform == 'darwin') {
-    process.chdir(mainFolderPath);
+    mainFolderPath = path.resolve(mainFolderPath, '../../..');
   }
   const config = ConfigFile.readOrCreateFileSync(path.join(mainFolderPath, CONFIG_FILENAME));
   const prefs = PreferencesFile.readOrCreateFileSync(path.join(config.flashpointPath, PREFERENCES_FILENAME));
